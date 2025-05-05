@@ -13,29 +13,30 @@
         
         <ul class="nav nav-tabs" id="myTab" role="tablist">
             <li class="nav-item" role="presentation">
-                <button class="nav-link active" id="text-tab" data-bs-toggle="tab" data-bs-target="#text" type="button" role="tab" aria-controls="text" aria-selected="true">Text</button>
+                <button class="nav-link {{ 'active' if active_tab == 'text' else '' }}" id="text-tab" data-bs-toggle="tab" data-bs-target="#text" type="button" role="tab" aria-controls="text" aria-selected="{{ 'true' if active_tab == 'text' else 'false' }}">Text</button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link" id="audio-tab" data-bs-toggle="tab" data-bs-target="#audio" type="button" role="tab" aria-controls="audio" aria-selected="false">Audio</button>
+                <button class="nav-link {{ 'active' if active_tab == 'audio' else '' }}" id="audio-tab" data-bs-toggle="tab" data-bs-target="#audio" type="button" role="tab" aria-controls="audio" aria-selected="{{ 'true' if active_tab == 'audio' else 'false' }}">Audio</button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link" id="image-tab" data-bs-toggle="tab" data-bs-target="#image" type="button" role="tab" aria-controls="image" aria-selected="false">Image</button>
+                <button class="nav-link {{ 'active' if active_tab == 'image' else '' }}" id="image-tab" data-bs-toggle="tab" data-bs-target="#image" type="button" role="tab" aria-controls="image" aria-selected="{{ 'true' if active_tab == 'image' else 'false' }}">Image</button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link" id="video-tab" data-bs-toggle="tab" data-bs-target="#video" type="button" role="tab" aria-controls="video" aria-selected="false">Video</button>
+                <button class="nav-link {{ 'active' if active_tab == 'video' else '' }}" id="video-tab" data-bs-toggle="tab" data-bs-target="#video" type="button" role="tab" aria-controls="video" aria-selected="{{ 'true' if active_tab == 'video' else 'false' }}">Video</button>
             </li>
         </ul>
         
         <div class="tab-content p-4 border border-top-0 rounded-bottom" id="myTabContent">
             <!-- Text Tab -->
-            <div class="tab-pane fade show active" id="text" role="tabpanel" aria-labelledby="text-tab">
+            <div class="tab-pane fade {{ 'show active' if active_tab == 'text' else '' }}" id="text" role="tabpanel" aria-labelledby="text-tab">
                 <h3>Text Fraud Detection</h3>
                 <p>Detect if text is AI-generated using RoBERTa OpenAI detector.</p>
                 
-                <form id="textForm" enctype="multipart/form-data">
+                <form method="POST" action="{{ url_for('detect_text') }}" enctype="multipart/form-data">
+                    <input type="hidden" name="tab" value="text">
                     <div class="mb-3">
                         <label for="textInput" class="form-label">Enter text:</label>
-                        <textarea class="form-control" id="textInput" name="text_input" rows="5" placeholder="Paste text here to analyze..."></textarea>
+                        <textarea class="form-control" id="textInput" name="text_input" rows="5" placeholder="Paste text here to analyze...">{{ text_input|default('') }}</textarea>
                     </div>
                     
                     <div class="mb-3">
@@ -46,24 +47,36 @@
                     <button type="submit" class="btn btn-primary">Analyze Text</button>
                 </form>
                 
-                <div id="textResult" class="mt-4 result-container d-none">
+                {% if text_result %}
+                <div id="textResult" class="mt-4 result-container">
                     <h4>Result:</h4>
-                    <div class="alert" id="textAlert">
-                        <p><strong>Prediction: </strong><span id="textPrediction"></span></p>
-                        <p><strong>Confidence: </strong><span id="textConfidence"></span>%</p>
+                    <div class="alert {{ 'alert-warning' if text_result.error else ('alert-danger' if text_result.is_ai_generated else 'alert-success') }}" id="textAlert">
+                        {% if text_result.error %}
+                        <p><strong>Error: </strong>{{ text_result.error }}</p>
+                        {% if text_result.status == 'loading' %}
+                        <p>Please try again in a few seconds.</p>
+                        {% endif %}
+                        {% else %}
+                        <p><strong>Prediction: </strong>{{ text_result.prediction }}</p>
+                        <p><strong>Confidence: </strong>{{ text_result.confidence }}%</p>
+                        {% endif %}
                     </div>
+                    {% if not text_result.error %}
                     <div class="progress">
-                        <div id="textProgressBar" class="progress-bar" role="progressbar" style="width: 0%"></div>
+                        <div id="textProgressBar" class="progress-bar {{ 'bg-danger' if text_result.is_ai_generated else 'bg-success' }}" role="progressbar" style="width: {{ text_result.confidence }}%"></div>
                     </div>
+                    {% endif %}
                 </div>
+                {% endif %}
             </div>
             
             <!-- Audio Tab -->
-            <div class="tab-pane fade" id="audio" role="tabpanel" aria-labelledby="audio-tab">
+            <div class="tab-pane fade {{ 'show active' if active_tab == 'audio' else '' }}" id="audio" role="tabpanel" aria-labelledby="audio-tab">
                 <h3>Audio Fraud Detection</h3>
                 <p>Detect if audio is spoofed/fake using AASIST model.</p>
                 
-                <form id="audioForm" enctype="multipart/form-data">
+                <form method="POST" action="{{ url_for('detect_audio') }}" enctype="multipart/form-data">
+                    <input type="hidden" name="tab" value="audio">
                     <div class="mb-3">
                         <label for="audioFile" class="form-label">Upload a .wav file (16kHz mono):</label>
                         <input class="form-control" type="file" id="audioFile" name="file" accept=".wav">
@@ -72,24 +85,33 @@
                     <button type="submit" class="btn btn-primary">Analyze Audio</button>
                 </form>
                 
-                <div id="audioResult" class="mt-4 result-container d-none">
+                {% if audio_result %}
+                <div id="audioResult" class="mt-4 result-container">
                     <h4>Result:</h4>
-                    <div class="alert" id="audioAlert">
-                        <p><strong>Prediction: </strong><span id="audioPrediction"></span></p>
-                        <p><strong>Confidence: </strong><span id="audioConfidence"></span>%</p>
+                    <div class="alert {{ 'alert-warning' if audio_result.error else ('alert-danger' if audio_result.is_spoofed else 'alert-success') }}" id="audioAlert">
+                        {% if audio_result.error %}
+                        <p><strong>Error: </strong>{{ audio_result.error }}</p>
+                        {% else %}
+                        <p><strong>Prediction: </strong>{{ audio_result.prediction }}</p>
+                        <p><strong>Confidence: </strong>{{ audio_result.confidence }}%</p>
+                        {% endif %}
                     </div>
+                    {% if not audio_result.error %}
                     <div class="progress">
-                        <div id="audioProgressBar" class="progress-bar" role="progressbar" style="width: 0%"></div>
+                        <div id="audioProgressBar" class="progress-bar {{ 'bg-danger' if audio_result.is_spoofed else 'bg-success' }}" role="progressbar" style="width: {{ audio_result.confidence }}%"></div>
                     </div>
+                    {% endif %}
                 </div>
+                {% endif %}
             </div>
             
             <!-- Image Tab -->
-            <div class="tab-pane fade" id="image" role="tabpanel" aria-labelledby="image-tab">
+            <div class="tab-pane fade {{ 'show active' if active_tab == 'image' else '' }}" id="image" role="tabpanel" aria-labelledby="image-tab">
                 <h3>Image Deepfake Detection</h3>
                 <p>Detect if an image is a deepfake using Deep-Fake-Detector-Model.</p>
                 
-                <form id="imageForm" enctype="multipart/form-data">
+                <form method="POST" action="{{ url_for('detect_image') }}" enctype="multipart/form-data">
+                    <input type="hidden" name="tab" value="image">
                     <div class="mb-3">
                         <label for="imageFile" class="form-label">Upload an image (.jpg, .png):</label>
                         <input class="form-control" type="file" id="imageFile" name="file" accept=".jpg,.jpeg,.png">
@@ -98,31 +120,44 @@
                     <button type="submit" class="btn btn-primary">Analyze Image</button>
                 </form>
                 
-                <div id="imageResult" class="mt-4 result-container d-none">
+                {% if image_result %}
+                <div id="imageResult" class="mt-4 result-container">
                     <div class="row">
                         <div class="col-md-6">
-                            <img id="imagePreview" class="img-fluid thumbnail" src="/placeholder.svg" alt="Uploaded image">
+                            {% if image_preview %}
+                            <img id="imagePreview" class="img-fluid thumbnail" src="data:image/jpeg;base64,{{ image_preview }}" alt="Uploaded image">
+                            {% else %}
+                            <img id="imagePreview" class="img-fluid thumbnail" src="/placeholder.svg" alt="No image">
+                            {% endif %}
                         </div>
                         <div class="col-md-6">
                             <h4>Result:</h4>
-                            <div class="alert" id="imageAlert">
-                                <p><strong>Prediction: </strong><span id="imagePrediction"></span></p>
-                                <p><strong>Confidence: </strong><span id="imageConfidence"></span>%</p>
+                            <div class="alert {{ 'alert-warning' if image_result.error else ('alert-danger' if image_result.is_fake else 'alert-success') }}" id="imageAlert">
+                                {% if image_result.error %}
+                                <p><strong>Error: </strong>{{ image_result.error }}</p>
+                                {% else %}
+                                <p><strong>Prediction: </strong>{{ image_result.prediction }}</p>
+                                <p><strong>Confidence: </strong>{{ image_result.confidence }}%</p>
+                                {% endif %}
                             </div>
+                            {% if not image_result.error %}
                             <div class="progress">
-                                <div id="imageProgressBar" class="progress-bar" role="progressbar" style="width: 0%"></div>
+                                <div id="imageProgressBar" class="progress-bar {{ 'bg-danger' if image_result.is_fake else 'bg-success' }}" role="progressbar" style="width: {{ image_result.confidence }}%"></div>
                             </div>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
+                {% endif %}
             </div>
             
             <!-- Video Tab -->
-            <div class="tab-pane fade" id="video" role="tabpanel" aria-labelledby="video-tab">
+            <div class="tab-pane fade {{ 'show active' if active_tab == 'video' else '' }}" id="video" role="tabpanel" aria-labelledby="video-tab">
                 <h3>Video Deepfake Detection</h3>
                 <p>Detect if a video contains deepfakes by analyzing frames.</p>
                 
-                <form id="videoForm" enctype="multipart/form-data">
+                <form method="POST" action="{{ url_for('detect_video') }}" enctype="multipart/form-data">
+                    <input type="hidden" name="tab" value="video">
                     <div class="mb-3">
                         <label for="videoFile" class="form-label">Upload a video (.mp4):</label>
                         <input class="form-control" type="file" id="videoFile" name="file" accept=".mp4">
@@ -131,23 +166,30 @@
                     <button type="submit" class="btn btn-primary">Analyze Video</button>
                 </form>
                 
-                <div id="videoResult" class="mt-4 result-container d-none">
+                {% if video_result %}
+                <div id="videoResult" class="mt-4 result-container">
                     <h4>Result:</h4>
-                    <div class="alert" id="videoAlert">
-                        <p><strong>Prediction: </strong><span id="videoPrediction"></span></p>
-                        <p><strong>Confidence: </strong><span id="videoConfidence"></span>%</p>
-                        <p><strong>Frames Analyzed: </strong><span id="videoFramesAnalyzed"></span></p>
-                        <p><strong>Fake Frames: </strong><span id="videoFakeFrames"></span> (<span id="videoFakePercentage"></span>%)</p>
+                    <div class="alert {{ 'alert-warning' if video_result.error else ('alert-danger' if video_result.is_fake else 'alert-success') }}" id="videoAlert">
+                        {% if video_result.error %}
+                        <p><strong>Error: </strong>{{ video_result.error }}</p>
+                        {% else %}
+                        <p><strong>Prediction: </strong>{{ video_result.prediction }}</p>
+                        <p><strong>Confidence: </strong>{{ video_result.confidence }}%</p>
+                        <p><strong>Frames Analyzed: </strong>{{ video_result.frames_analyzed }}</p>
+                        <p><strong>Fake Frames: </strong>{{ video_result.fake_frames }} ({{ video_result.fake_percentage }}%)</p>
+                        {% endif %}
                     </div>
+                    {% if not video_result.error %}
                     <div class="progress">
-                        <div id="videoProgressBar" class="progress-bar" role="progressbar" style="width: 0%"></div>
+                        <div id="videoProgressBar" class="progress-bar {{ 'bg-danger' if video_result.is_fake else 'bg-success' }}" role="progressbar" style="width: {{ video_result.confidence }}%"></div>
                     </div>
+                    {% endif %}
                 </div>
+                {% endif %}
             </div>
         </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 </body>
 </html>
