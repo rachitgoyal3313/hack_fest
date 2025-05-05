@@ -1,0 +1,11 @@
+flask==2.3.3
+torch>=2.2.0
+torchvision>=0.17.0
+torchaudio>=0.17.0
+transformers>=4.31.0
+numpy>=1.24.3
+Pillow>=10.0.0
+opencv-python>=4.8.0
+soundfile>=0.12.1
+resampy>=0.4.2
+werkzeug>=2.3.7
